@@ -3,7 +3,6 @@ package com.example.stopwatch
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.PersistableBundle
 import android.os.SystemClock
 import android.util.Log
 import android.widget.Button
@@ -14,16 +13,16 @@ class MainActivity : AppCompatActivity() {
     // make a class-wide static constant in kotlin
     companion object {
         // all your "static" constants go here
-        val TAG = "MainActivity"
-        val STATE_STARTED = "how many seconds since start of timer"
-        val STATE_RUNNING = "whether the chronometer is running"
+        const val TAG = "MainActivity"
+        const val STATE_DISPLAY = "how many seconds since start of timer"
+        const val STATE_RUNNING = "whether the chronometer is running"
     }
 
     lateinit var startStop: Button
     lateinit var chronometer: Chronometer
     lateinit var reset: Button
     var timeStopped: Long = 0
-    var running = true
+    var running = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,10 +32,16 @@ class MainActivity : AppCompatActivity() {
         setListeners()
         if(savedInstanceState != null) {
             running = savedInstanceState.getBoolean(STATE_RUNNING)
-            timeStopped = savedInstanceState.getLong(STATE_STARTED)
-            chronometer.base = SystemClock.elapsedRealtime() - timeStopped
-            // if (running) chronometer.start()
-            Log.d(TAG, "onCreate: STATE_TIME=${savedInstanceState.getLong(STATE_STARTED)}")
+            if (running) {
+                timeStopped = savedInstanceState.getLong(STATE_DISPLAY)
+                // chronometer.base = SystemClock.elapsedRealtime() -
+                    // savedInstanceState.getLong(STATE_DISPLAY )
+                runClock()
+            } else {
+                timeStopped = savedInstanceState.getLong(STATE_DISPLAY)
+                chronometer.base = SystemClock.elapsedRealtime() - timeStopped
+            }
+            Log.d(TAG, "onCreate: STATE_TIME=${savedInstanceState.getLong(STATE_DISPLAY)}")
         }
     }
 
@@ -46,29 +51,19 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         // calculate the display time
-        val displayTime =
-            /* if (running)
-                chronometer.base
-            else */
-                timeStopped
-        outState.putLong(STATE_STARTED, displayTime)
-        outState.putBoolean(STATE_RUNNING, running)
+        val wasRunning = running
+        if (running)
+            stopClock()
+        outState.putLong(STATE_DISPLAY, timeStopped)
+        outState.putBoolean(STATE_RUNNING, wasRunning)
     }
 
     private fun setListeners() {
         startStop.setOnClickListener {
             if (running) {
-                running = false
-                startStop.setBackgroundColor(Color.RED)
-                chronometer.base = SystemClock.elapsedRealtime() - timeStopped
-                chronometer.start()
-                startStop.text = "Stop"
+                stopClock()
             } else {
-                running = true
-                startStop.setBackgroundColor(resources.getColor(R.color.purple_500))
-                timeStopped = SystemClock.elapsedRealtime() - chronometer.base
-                chronometer.stop()
-                startStop.text = "Start"
+                runClock()
             }
         }
 
@@ -76,6 +71,22 @@ class MainActivity : AppCompatActivity() {
             chronometer.base = SystemClock.elapsedRealtime()
             timeStopped = 0
         }
+    }
+
+    private fun runClock() {
+        running = true
+        startStop.setBackgroundColor(Color.RED)
+        chronometer.base = SystemClock.elapsedRealtime() - timeStopped
+        chronometer.start()
+        startStop.text = "Stop"
+    }
+
+    private fun stopClock() {
+        running = false
+        startStop.setBackgroundColor(resources.getColor(R.color.purple_500))
+        timeStopped = SystemClock.elapsedRealtime() - chronometer.base
+        chronometer.stop()
+        startStop.text = "Start"
     }
 
     private fun wireWidgets() {
